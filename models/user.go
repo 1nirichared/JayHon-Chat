@@ -27,10 +27,12 @@ func IsExited(email string) bool {
 }
 func AddUser(user dto.UserDTO, c *gin.Context) {
 	db := GetChatDB()
+	db = db.Debug()
 	PassWord := user.Password
 	EncryptedPassword, err := helper.Bcrypt(PassWord)
 	if err != nil {
 		result.Failture(result.APIcode.EncryptionFailed, result.APIcode.GetMessage(result.APIcode.EncryptionFailed), c, nil)
+		return
 	}
 	User := &User{
 		Username: user.Username,
@@ -45,7 +47,8 @@ func CheckUser(user dto.UserDTO, c *gin.Context) bool {
 	var User User
 	db.Where("email=?", user.Email).First(&User)
 	if User.ID == 0 {
-		result.Failture(result.APIcode.UserNotExist, result.APIcode.GetMessage(result.APIcode.UserExist), c, nil)
+		result.Failture(result.APIcode.UserNotExist, result.APIcode.GetMessage(result.APIcode.UserNotExist), c, nil)
+		return false
 	}
 	if !helper.CheckPasswordHash(user.Password, User.Password) {
 

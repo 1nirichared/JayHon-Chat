@@ -19,6 +19,7 @@ type Codes struct {
 	EncryptionFailed uint
 	ShouldBindError  uint
 	UserNotExist     uint
+	AtoiError        uint
 }
 
 // 状态码
@@ -39,6 +40,7 @@ var APIcode = &Codes{
 	EncryptionFailed: 612,
 	ShouldBindError:  613,
 	UserNotExist:     614,
+	AtoiError:        615,
 }
 
 // 状态信息初始化
@@ -60,6 +62,7 @@ func init() {
 		APIcode.EncryptionFailed: "加密失败",
 		APIcode.ShouldBindError:  "绑定失败",
 		APIcode.UserNotExist:     "用户不存在",
+		APIcode.AtoiError:        "字符串转化为整形错误",
 	}
 }
 

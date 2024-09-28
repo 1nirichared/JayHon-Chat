@@ -36,5 +36,5 @@ func Failture(code uint, message string, c *gin.Context, err *error) {
 	} else {
 		result.Data = gin.H{}
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusBadRequest, result)
 }
