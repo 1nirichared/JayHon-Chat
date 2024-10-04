@@ -1,16 +1,20 @@
 package websocket
 
 import (
+	"JayHonChat/models"
 	"JayHonChat/result"
+	"JayHonChat/services/helper"
 	"JayHonChat/services/safe"
 	"JayHonChat/ws"
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/jianfengye/collection"
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type wsClient struct {
@@ -99,19 +103,84 @@ type GoServe struct {
 func Run(c *gin.Context) {
 	//解决跨域问题
 	wsUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	//建立websocket连接
+	coon, _ := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	defer coon.Close()
+	done := make(chan struct{})
+	go Read(coon, done)
+	go Write(done)
+	select {}
 }
 
 func Read(conn *websocket.Conn, done chan<- struct{}) {
 
 	defer func() {
-
+		//捕获read抛出的panic
+		if err := recover(); err != nil {
+			var errObj error
+			// 检查 err 是否是 error 类型
+			if e, ok := err.(error); ok {
+				errObj = e
+			} else {
+				// 如果不是 error 类型，创建一个新的 error
+				errObj = fmt.Errorf("%v", err)
+			}
+			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &errObj)
+		}
 	}()
 	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			offline <- conn
+			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &err)
+			conn.Close()
+			close(done)
+			return
+		}
+		if string(msg) == `heartbeat` {
+			appendPing(conn)
+			chNotify <- 1
+			conn.WriteMessage(websocket.TextMessage, []byte(`{"status":0,"data":"heartbeat ok"}`))
+			<-chNotify
+			continue
+		}
+		json.Unmarshal(msg, &clientMsgData)
+		clientMsgLock.Lock()
+		clientMsg = clientMsgData
+		clientMsgLock.Unlock()
+		if clientMsg.Data.Uid != "" {
+			if clientMsg.Status == msgTypeOnline {
+				roomid, _ := getRoomId()
+				enterRooms <- wsClient{
+					Conn:       conn,
+					RemoteAddr: conn.RemoteAddr().String(),
+					Uid:        clientMsg.Data.Uid,
+					Username:   clientMsg.Data.Username,
+					Roomid:     roomid,
+					AvatarId:   clientMsg.Data.AvatarId,
+				}
+			}
+			_, serveMsg := formatServeMsgStr(clientMsg.Status, conn)
+			sMsg <- serveMsg
 
+		}
 	}
 }
 
 func Write(done <-chan struct{}) {
+	defer func() {
+		if err := recover(); err != nil {
+			var errObj error
+			// 检查 err 是否是 error 类型
+			if e, ok := err.(error); ok {
+				errObj = e
+			} else {
+				// 如果不是 error 类型，创建一个新的 error
+				errObj = fmt.Errorf("%v", err)
+			}
+			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &errObj)
+		}
+	}()
 	for {
 		select {
 		case <-done:
@@ -123,7 +192,21 @@ func Write(done <-chan struct{}) {
 			switch cl.Status {
 			case msgTypeOnline, msgTypeSend:
 				notify(cl.Conn, string(serverMsgStr))
+			case msgTypeGetOnlineUser:
+				chNotify <- 1
+				cl.Conn.WriteMessage(websocket.TextMessage, serverMsgStr)
+				<-chNotify
+			case msgTypePrivateChat:
+				chNotify <- 1
+				toUser := findToUserCoonClient()
+				if toUser != nil {
+					toUser.(wsClient).Conn.WriteMessage(websocket.TextMessage, serverMsgStr)
+				}
+				<-chNotify
 			}
+		case o := <-offline:
+			disconnect(o)
+
 		}
 	}
 }
@@ -163,9 +246,27 @@ func getRoomId() (string, int) {
 	roomid := clientMsg.Data.Roomid
 	roomIdInt, err := strconv.Atoi(roomid)
 	if err != nil {
-		result.Failture(result.APIcode.AtoiError, result.APIcode.GetMessage(result.APIcode.AtoiError), nil, err)
+		result.Failture(result.APIcode.AtoiError, result.APIcode.GetMessage(result.APIcode.AtoiError), nil, &err)
 	}
 	return roomid, roomIdInt
+}
+
+// 定时任务清理没有心跳的连接
+func HandleOfflineCoon() {
+	objColl := collection.NewObjCollection(pingMap)
+	retColl := safe.Safety.Lock(func() interface{} {
+		return objColl.Reject(func(obj interface{}, index int) bool {
+			nowTime := time.Now().Unix()
+			timeDiff := nowTime - obj.(pingStorage).Time
+			if timeDiff > 60 { //超过60s无心跳
+				offline <- obj.(pingStorage).Conn
+				return true
+			}
+			return false
+		})
+	}).(collection.ICollection)
+	interfaces, _ := retColl.ToInterfaces()
+	pingMap = interfaces
 }
 
 // 统一消息发送
@@ -180,4 +281,124 @@ func notify(conn *websocket.Conn, msg string) {
 
 	}
 	<-chNotify
+}
+
+func findToUserCoonClient() interface{} {
+	_, roomIdInt := getRoomId()
+	assignRoom := rooms[roomIdInt]
+	toUserID := clientMsg.Data.ToUid
+	for _, con := range assignRoom {
+		stringUid := con.(wsClient).Uid
+		if stringUid == toUserID {
+			return con
+		}
+	}
+	return nil
+}
+
+func disconnect(conn *websocket.Conn) {
+	_, roomIdInt := getRoomId()
+	objColl := collection.NewObjCollection(rooms[roomIdInt])
+	retColl := safe.Safety.Lock(func() interface{} {
+		return objColl.Reject(func(item interface{}, key int) bool {
+			if item.(wsClient).RemoteAddr == conn.RemoteAddr().String() {
+				data := msgData{
+					Username: item.(wsClient).Username,
+					Uid:      item.(wsClient).Uid,
+					Time:     time.Now().UnixNano() / 1e6,
+				}
+				jsonStrServeMsg := msg{
+					Status: msgTypeOffline,
+					Data:   data,
+				}
+				serverMsgStr, _ := json.Marshal(jsonStrServeMsg)
+				disMsg := string(serverMsgStr)
+				item.(wsClient).Conn.Close()
+				notify(conn, disMsg)
+				return true
+			}
+			return false
+
+		})
+	}).(collection.ICollection)
+	interfaces, _ := retColl.ToInterfaces()
+	rooms[roomIdInt] = interfaces
+}
+
+func appendPing(coon *websocket.Conn) {
+	objColl := collection.NewObjCollection(pingMap)
+	//先删除相同的
+	retColl := safe.Safety.Lock(func() interface{} {
+		return objColl.Reject(func(obj interface{}, index int) bool {
+			if obj.(pingStorage).RemoteAddr == coon.RemoteAddr().String() {
+				return true
+			}
+			return false
+		})
+	}).(collection.ICollection)
+	//追加
+	retColl = safe.Safety.Lock(func() interface{} {
+		return retColl.Append(pingStorage{
+			Conn:       coon,
+			RemoteAddr: coon.RemoteAddr().String(),
+			Time:       time.Now().Unix(),
+		})
+	}).(collection.ICollection)
+	interfaces, _ := retColl.ToInterfaces()
+	//存储心跳连接信息
+	pingMap = interfaces
+}
+
+// 格式化传递给客户端的消息数据
+func formatServeMsgStr(status int, coon *websocket.Conn) ([]byte, msg) {
+	roomid, roomIdInt := getRoomId()
+	data := msgData{
+		Username: clientMsg.Data.Username,
+		Uid:      clientMsg.Data.Uid,
+		Roomid:   roomid,
+		Time:     time.Now().UnixNano() / 1e6,
+	}
+	if status == msgTypeSend || status == msgTypePrivateChat {
+		data.AvatarId = clientMsg.Data.AvatarId
+		content := clientMsg.Data.Content
+		data.Content = content
+		//超限截断
+		if helper.MbStrlen(content) > 800 {
+			data.Content = string([]rune(content)[:800])
+		}
+		toUidStr := clientMsg.Data.ToUid
+		toUid, _ := strconv.Atoi(toUidStr)
+
+		// 保存消息
+		stringUid := data.Uid
+		intUid, _ := strconv.Atoi(stringUid)
+		if clientMsg.Data.ImageUrl != "" {
+			models.SaveContent(map[string]interface{}{
+				"user_id":    intUid,
+				"to_user_id": toUid,
+				"content":    data.Content,
+				"room_id":    data.Roomid,
+				"imageUrl":   clientMsg.Data.ImageUrl,
+			})
+		} else {
+			models.SaveContent(map[string]interface{}{
+				"user_id":    intUid,
+				"to_user_id": toUid,
+				"content":    data.Content,
+				"room_id":    data.Roomid,
+			})
+		}
+	}
+	if status == msgTypeGetOnlineUser {
+		ro := rooms[roomIdInt]
+		data.Count = len(ro)
+		data.List = ro
+	}
+	jsonStrServeMsg := msg{
+		Status: status,
+		Data:   data,
+		Conn:   coon,
+	}
+	serverMsgStr, _ := json.Marshal(jsonStrServeMsg)
+	return serverMsgStr, jsonStrServeMsg
 }
