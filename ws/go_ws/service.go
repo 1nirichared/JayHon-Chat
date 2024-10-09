@@ -1,4 +1,4 @@
-package websocket
+package go_ws
 
 import (
 	"JayHonChat/models"
@@ -71,7 +71,7 @@ var (
 	//用于传递服务器和客户端之间的消息（类型为 msg 结构体）。
 	//当服务器或客户端发消息时，消息会通过该通道在不同的 goroutine 之间传递。
 	sMsg = make(chan msg)
-	//这是一个 chan 通道，用于传递需要断开连接的客户端（类型为 *websocket.Conn）。
+	//这是一个 chan 通道，用于传递需要断开连接的客户端（类型为 *go_ws.Conn）。
 	//当客户端连接断开或超时时，连接会通过该通道传递，并触发相关的断开处理。
 	offline = make(chan *websocket.Conn)
 	//这是一个带有缓冲区大小为 1 的 chan 通道，
@@ -79,7 +79,7 @@ var (
 	//它在一些操作（如消息通知、写入）之间起到阻塞或控制的作用，避免多个 goroutine 并发修改同一资源。
 	//在写消息时，它会阻塞其他 goroutine，
 	//确保同一时间只有一个消息被发送，
-	//避免 concurrent write to websocket connection 错误。
+	//避免 concurrent write to go_ws connection 错误。
 	chNotify = make(chan int, 1)
 	//pingMap 是一个 []interface{} 切片，用于存储心跳检测的客户端连接信息。
 	//每个连接的信息被存储为 pingStorage 结构体，记录了连接的 WebSocket 对象、远程地址和最近一次心跳的时间。

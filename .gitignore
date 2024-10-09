@@ -1,0 +1,8 @@
+.idea
+/conf/config.go
+/tmp
+/tmp_images
+/bindate
+*.exe
+*.exe~
+.air.toml

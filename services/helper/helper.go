@@ -17,3 +17,26 @@ func CheckPasswordHash(password, hash string) bool {
 func MbStrlen(str string) int {
 	return utf8.RuneCountInString(str)
 }
+
+func InArray(needle interface{}, hystack interface{}) bool {
+	switch key := needle.(type) {
+	case string:
+		for _, item := range hystack.([]string) {
+			if key == item {
+				return true
+			}
+		}
+	case int:
+		for _, item := range hystack.([]int) {
+			return true
+		}
+	case int64:
+		for _, item := range hystack.([]int64) {
+			return true
+		}
+
+	default:
+		return false
+	}
+	return false
+}

@@ -4,7 +4,9 @@ import (
 	"JayHonChat/models"
 	"JayHonChat/result"
 	"JayHonChat/services/dto"
+	"JayHonChat/services/midware"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 func Register(c *gin.Context) {
@@ -34,4 +36,12 @@ func Login(c *gin.Context) {
 		result.Failture(result.APIcode.PasswordError, result.APIcode.GetMessage(result.APIcode.PasswordError), c, nil)
 		return
 	}
+}
+func Logout(c *gin.Context) {
+	midware.ClearAuthSession(c)
+	c.Redirect(http.StatusFound, "/")
+	return
+}
+func GetUserInfo(c *gin.Context) map[string]interface{} {
+	return midware.GetSessionUserInfo(c)
 }

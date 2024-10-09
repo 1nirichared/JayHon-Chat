@@ -21,6 +21,10 @@ type Codes struct {
 	UserNotExist     uint
 	AtoiError        uint
 	WriteError       uint
+	SelectError      uint
+	PostFormError    uint
+	UploadFileError  uint
+	RequsetError     uint
 }
 
 // 状态码
@@ -43,6 +47,10 @@ var APIcode = &Codes{
 	UserNotExist:     614,
 	AtoiError:        615,
 	WriteError:       616,
+	SelectError:      617,
+	PostFormError:    618,
+	UploadFileError:  619,
+	RequsetError:     620,
 }
 
 // 状态信息初始化
@@ -66,6 +74,10 @@ func init() {
 		APIcode.UserNotExist:     "用户不存在",
 		APIcode.AtoiError:        "字符串转化为整形错误",
 		APIcode.WriteError:       "写错误",
+		APIcode.SelectError:      "查询失败",
+		APIcode.PostFormError:    "获取表单信息失败",
+		APIcode.UploadFileError:  "上传文件错误",
+		APIcode.RequsetError:     "请求失败",
 	}
 }
 

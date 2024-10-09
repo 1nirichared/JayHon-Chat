@@ -4,6 +4,7 @@ import (
 	"JayHonChat/result"
 	"JayHonChat/services/dto"
 	"JayHonChat/services/helper"
+	"JayHonChat/services/midware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,7 @@ type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
+	AvatarId string `json:"avatar"`
 }
 
 func IsExited(email string) bool {
@@ -55,4 +57,15 @@ func CheckUser(user dto.UserDTO, c *gin.Context) bool {
 		return false
 	}
 	return true
+}
+func FindUserByField(field, value string) User {
+	var u User
+	db := GetChatDB()
+	if field == "id" || field == "username" {
+		db.Where(field+"=?", value).First(&u)
+	}
+	return u
+}
+func GetUserInfo(c *gin.Context) map[string]interface{} {
+	return midware.GetSessionUserInfo(c)
 }

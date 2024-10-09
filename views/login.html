@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>JayHon-Chat 聊天室</title>
+    <link rel="stylesheet" href="//lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/stylesheets/style.css">
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon" />
+    <script type="text/javascript" src="//lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/jquery/1.11.2/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/rolling/js/rolling.js"></script>
+</head>
+<body class="login">
+<div class="scrollbar-macosx">
+    <div class="main container ">
+        <div class="jumbotron">
+            <h3>欢迎来到 JayHon-Chat 聊天室，请先登录</h3>
+            <p class="user_portrait">
+                <img portrait_id="1" src="/static/images/user/1.png" alt="portrait_1">
+            </p>
+            <p class="select_portrait">
+                <img portrait_id="1" src="/static/images/user/1.png" alt="portrait_1" class="t">
+                <img portrait_id="2" src="/static/images/user/2.png" alt="portrait_1">
+                <img portrait_id="3" src="/static/images/user/3.png" alt="portrait_1">
+                <img portrait_id="4" src="/static/images/user/4.png" alt="portrait_1">
+                <img portrait_id="5" src="/static/images/user/5.png" alt="portrait_1">
+                <img portrait_id="6" src="/static/images/user/6.png" alt="portrait_1">
+                <img portrait_id="7" src="/static/images/user/7.png" alt="portrait_1">
+                <img portrait_id="8" src="/static/images/user/8.png" alt="portrait_1">
+                <img portrait_id="9" src="/static/images/user/9.png" alt="portrait_1">
+                <img portrait_id="10" src="/static/images/user/10.png" alt="portrait_1">
+                <img portrait_id="11" src="/static/images/user/11.png" alt="portrait_1">
+                <img portrait_id="12" src="/static/images/user/12.png" alt="portrait_1">
+            </p>
+
+            <div class="input-group">
+
+                <input type="email" class="form-control" placeholder="输入你的邮箱地址" required>
+
+                <input type="text" class="form-control" placeholder="输入你的昵称，不少于两位" required>
+
+                <input type="password" class="form-control" placeholder="密码，不少于6位" required>
+
+                <button id="login" class="btn btn-default" type="submit">
+                    <span class="">登录</span>
+                </button>
+            </div>
+        </div>
+        <div class="footer">
+            <span>{{ .OnlineUserCount }}</span> 人在线热聊中！
+        </div>
+    </div>
+</div>
+</body>
+<script>
+
+    $(document).ready(function() {
+
+        $('.select_portrait img').hover(function() {
+            var portrait_id = $(this).attr('portrait_id');
+            $('.user_portrait img').attr('src', '/static/images/user/' + portrait_id + '.png');
+        }, function() {
+            var t_id = $('.user_portrait img').attr('portrait_id');
+            $('.user_portrait img').attr('src', '/static/images/user/' + t_id + '.png');
+        });
+
+        $('.select_portrait img').click(function(event) {
+            var portrait_id = $(this).attr('portrait_id');
+            $('.user_portrait img').attr('portrait_id', portrait_id);
+            $('.select_portrait img').removeClass('t');
+            $(this).addClass('t');
+        });
+
+        $('#login').click(function(event) {
+
+            let email = $('.login input[type=email]').val(); // 用户邮箱
+            let userName = $('.login input[type=text]').val(); // 用户昵称
+            let pwd = $('.login input[type=password]').val(); // 用户密码
+
+            let avatar_id = $('.user_portrait img').attr('portrait_id'); // 用户头像id
+
+            // 检查邮箱格式是否正确
+            if (email === '' || !validateEmail(email)) {
+                alert('请输入有效的邮箱地址');
+                return false;
+            }
+
+            // 发送登录请求
+            $.post("/login", {
+                email: email,
+                username: userName,
+                password: pwd,
+                avatar_id: avatar_id
+            }, function(res) {
+                if (res.code != 0) {
+                    alert(res.msg);
+                    return false;
+                }
+                window.location.assign("/home");
+            });
+        });
+
+        // 回车键登录
+        $(document).keyup(function(event) {
+            if (event.keyCode === 13) {
+                $("#login").trigger("click");
+            }
+        });
+
+        // 验证邮箱格式的函数
+        function validateEmail(email) {
+            var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+    });
+
+</script>
+</html>
