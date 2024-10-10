@@ -3,6 +3,7 @@ package result
 
 import (
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 )
 
@@ -31,10 +32,16 @@ func Failture(code uint, message string, c *gin.Context, err *error) {
 	result := Result{}
 	result.Code = code
 	result.Message = message
-	if err != nil {
+	if err != nil && *err != nil { // 确保 err 和 *err 都不为 nil
 		result.Data = *err
 	} else {
 		result.Data = gin.H{}
 	}
-	c.JSON(http.StatusBadRequest, result)
+	if c != nil {
+		c.JSON(http.StatusBadRequest, result)
+		log.Printf("Error %d: %s, Data: %v", code, message, result.Data)
+	} else {
+		log.Printf("Error %d: %s, Data: %v", code, message, result.Data)
+	}
+
 }

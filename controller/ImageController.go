@@ -2,8 +2,10 @@ package controller
 
 import (
 	"JayHonChat/result"
+	"JayHonChat/services/Img_upload_connector"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"net/http"
 	"os"
 )
 
@@ -26,5 +28,14 @@ func ImgKrUpload(c *gin.Context) {
 			result.APIcode.GetMessage(result.APIcode.UploadFileError), c, &err)
 		return
 	}
+	krUpload := Img_upload_connector.ImgCreate().Upload(filename)
 
+	os.Remove(filename)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": map[string]interface{}{
+			"url": krUpload,
+		},
+	})
 }

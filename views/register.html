@@ -34,10 +34,10 @@
             </p>
 
             <div class="input-group">
-                <input type="email" class="form-control" placeholder="输入你的邮箱地址" required>
-                <input type="text" class="form-control" placeholder="输入你的昵称，不少于两位" required>
-                <input type="password" class="form-control" placeholder="密码，不少于6位" required>
-                <button id="register" class="btn btn-default" type="submit">
+                <input type="email" name="email" class="form-control" placeholder="输入你的邮箱地址" required>
+                <input type="text" name="username" class="form-control" placeholder="输入你的昵称，不少于两位" required>
+                <input type="password" name="password" class="form-control" placeholder="密码，不少于6位" required>
+                <button id="register" class="btn btn-default" type="button"> <!-- 改为 type="button" -->
                     <span class="">注册</span>
                 </button>
             </div>
@@ -50,7 +50,6 @@
 </body>
 <script>
     $(document).ready(function() {
-
         // 头像选择逻辑
         $('.select_portrait img').hover(function() {
             var portrait_id = $(this).attr('portrait_id');
@@ -69,10 +68,9 @@
 
         // 注册按钮逻辑
         $('#register').click(function(event) {
-
-            let email = $('.register input[type=email]').val(); // 用户邮箱
-            let userName = $('.register input[type=text]').val(); // 用户昵称
-            let pwd = $('.register input[type=password]').val(); // 用户密码
+            let email = $('.register input[name=email]').val(); // 用户邮箱
+            let userName = $('.register input[name=username]').val(); // 用户昵称
+            let pwd = $('.register input[name=password]').val(); // 用户密码
             let avatar_id = $('.user_portrait img').attr('portrait_id'); // 用户头像id
 
             // 检查邮箱格式是否正确
@@ -82,17 +80,23 @@
             }
 
             // 发送注册请求
-            $.post("/register", {
-                email: email,
-                username: userName,
-                password: pwd,
-                avatar_id: avatar_id
-            }, function(res) {
-                if (res.code != 0) {
-                    alert(res.msg);
-                    return false;
+            $.ajax({
+                url: "/register",
+                type: "POST",
+                contentType: "application/x-www-form-urlencoded", // 设置请求头
+                data: {
+                    email: email,
+                    username: userName,
+                    password: pwd,
+                    avatar_id: avatar_id
+                },
+                success: function(res) {
+                    if (res.code != 0) {
+                        alert(res.msg);
+                        return false;
+                    }
+                    window.location.assign("/home");
                 }
-                window.location.assign("/home");
             });
         });
 
@@ -108,7 +112,6 @@
             var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return re.test(email);
         }
-
     });
 </script>
 </html>

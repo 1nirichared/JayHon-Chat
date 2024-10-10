@@ -95,9 +95,22 @@ const msgTypeOffline = 2       //离线
 const msgTypeSend = 3          //发送消息
 const msgTypeGetOnlineUser = 4 //获取再线用户列表
 const msgTypePrivateChat = 5   //私聊
+const roomCount = 6
 
 type GoServe struct {
 	ws.ServeInterface
+}
+
+func (goServe *GoServe) RunWs(c *gin.Context) {
+	Run(c)
+}
+
+func (goServe *GoServe) GetOnlineUserCount() int {
+	return GetOnlineUserCount()
+}
+
+func (goServe *GoServe) GetOnlineRoomUserCount(roomId int) int {
+	return GetOnlineRoomUserCount(roomId)
 }
 
 func Run(c *gin.Context) {
@@ -401,4 +414,16 @@ func formatServeMsgStr(status int, coon *websocket.Conn) ([]byte, msg) {
 	}
 	serverMsgStr, _ := json.Marshal(jsonStrServeMsg)
 	return serverMsgStr, jsonStrServeMsg
+}
+
+func GetOnlineUserCount() int {
+	num := 0
+	for i := 0; i <= roomCount; i++ {
+		num = num + GetOnlineRoomUserCount(i)
+	}
+	return num
+}
+
+func GetOnlineRoomUserCount(roomId int) int {
+	return len(rooms[roomId])
 }

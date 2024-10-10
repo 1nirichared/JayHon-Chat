@@ -1,10 +1,10 @@
 package models
 
+import "C"
 import (
 	"JayHonChat/result"
 	"JayHonChat/services/dto"
 	"JayHonChat/services/helper"
-	"JayHonChat/services/midware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -15,7 +15,7 @@ type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
-	AvatarId string `json:"avatar"`
+	AvatarId string `json:"avatar_id"`
 }
 
 func IsExited(email string) bool {
@@ -40,23 +40,24 @@ func AddUser(user dto.UserDTO, c *gin.Context) {
 		Username: user.Username,
 		Password: EncryptedPassword,
 		Email:    user.Email,
+		AvatarId: user.AvatarId,
 	}
 	db.Create(&User)
 }
 
-func CheckUser(user dto.UserDTO, c *gin.Context) bool {
+func CheckUser(user dto.UserDTO, c *gin.Context) (bool, *User) {
 	db := GetChatDB()
 	var User User
 	db.Where("email=?", user.Email).First(&User)
 	if User.ID == 0 {
 		result.Failture(result.APIcode.UserNotExist, result.APIcode.GetMessage(result.APIcode.UserNotExist), c, nil)
-		return false
+		return false, nil
 	}
 	if !helper.CheckPasswordHash(user.Password, User.Password) {
 
-		return false
+		return false, nil
 	}
-	return true
+	return true, &User
 }
 func FindUserByField(field, value string) User {
 	var u User
@@ -66,6 +67,11 @@ func FindUserByField(field, value string) User {
 	}
 	return u
 }
-func GetUserInfo(c *gin.Context) map[string]interface{} {
-	return midware.GetSessionUserInfo(c)
+
+func SaveAvatarId(AvatarId string, u dto.UserDTO) User {
+	var User User
+	User.AvatarId = AvatarId
+	db := GetChatDB()
+	db.Save(&u)
+	return User
 }

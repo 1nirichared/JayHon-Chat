@@ -10,6 +10,25 @@ import (
 	"strconv"
 )
 
+func Index(c *gin.Context) {
+	// 已登录跳转room界面，多页面应该考虑放在中间件实现
+	userInfo := ServiceUser.GetUserInfo(c)
+	if len(userInfo) > 0 {
+		c.Redirect(http.StatusFound, "/home")
+		return
+	}
+
+	OnlineUserCount := primary.OnlineUserCount()
+
+	c.HTML(http.StatusOK, "login.html", gin.H{
+		"OnlineUserCount": OnlineUserCount,
+	})
+}
+
+func RegisterPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "register.html", nil)
+}
+
 func Room(c *gin.Context) {
 	roomId := c.Param("room_id")
 	rooms := []string{"1", "2", "3", "4", "5", "6"}

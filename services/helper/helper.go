@@ -28,11 +28,16 @@ func InArray(needle interface{}, hystack interface{}) bool {
 		}
 	case int:
 		for _, item := range hystack.([]int) {
-			return true
+			if key == item {
+				return true
+			}
+
 		}
 	case int64:
 		for _, item := range hystack.([]int64) {
-			return true
+			if key == item {
+				return true
+			}
 		}
 
 	default:

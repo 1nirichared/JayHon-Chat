@@ -39,11 +39,11 @@ func GetLimitMsg(roomId string, offsert int) []map[string]interface{} {
 	var results []map[string]interface{}
 	db := GetChatDB()
 	db.Model(&Message{}).
-		Select("message.*,user.username,user.avatar_id").
-		Joins("INNER Join users on users.id=message.user_id").
-		Where("message.room_id= " + roomId).
-		Where("message.to_user_id=0").
-		Order("message.id.desc").
+		Select("messages.*,users.username,users.avatar_id").
+		Joins("INNER Join users on users.id=messages.user_id").
+		Where("messages.room_id= " + roomId).
+		Where("messages.to_user_id=0").
+		Order("messages.id desc").
 		Offset(offsert).Limit(100).Find(&results)
 
 	if offsert == 0 {

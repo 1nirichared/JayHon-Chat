@@ -4,10 +4,12 @@ import (
 	"JayHonChat/conf"
 	"JayHonChat/models"
 	"JayHonChat/routers"
+	"JayHonChat/views"
 	"bytes"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"log"
+	"net/http"
 )
 
 func init() {
@@ -32,7 +34,8 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	port := viper.GetString(`app.port`)
 	router := routers.InitRoute()
+	router.SetHTMLTemplate(views.GoTpl)
 	log.Println("监听端口", "http://127.0.0.1:"+port)
 
-	router.Run(":" + port)
+	http.ListenAndServe(":"+port, router)
 }
