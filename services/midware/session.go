@@ -30,9 +30,11 @@ func GetSessionUserInfo(c *gin.Context) map[string]interface{} {
 	if uid != nil {
 		user := models.FindUserByField("id", uid.(string))
 		data["uid"] = user.ID
+		data["email"] = user.Email
 		data["username"] = user.Username
-
+		data["avatar_id"] = user.AvatarId
 	}
+
 	return data
 }
 

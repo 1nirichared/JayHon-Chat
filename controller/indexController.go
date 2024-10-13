@@ -6,6 +6,7 @@ import (
 	"JayHonChat/services/message_service"
 	"JayHonChat/ws/primary"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -39,11 +40,13 @@ func Room(c *gin.Context) {
 	userInfo := ServiceUser.GetUserInfo(c)
 	msgList := message_service.GetLimitMsg(roomId, 0)
 	c.HTML(http.StatusOK, "room.html", gin.H{
-		"userInfo":        userInfo,
+		"user_info":       userInfo,
 		"msg_list":        msgList,
 		"room_list_count": len(msgList),
 		"room_id":         roomId,
 	})
+	log.Printf("Room ID: %s, User Info: %+v", roomId, userInfo)
+
 }
 
 func Login(c *gin.Context) {

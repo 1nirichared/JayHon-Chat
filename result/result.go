@@ -16,13 +16,25 @@ type Result struct {
 
 // success
 func Success(data interface{}, c *gin.Context) {
-	if data == nil {
-		data = gin.H{}
-	}
 	result := Result{}
 	result.Code = APIcode.Success
 	result.Message = APIcode.GetMessage(APIcode.Success)
-	result.Data = data
+
+	if data == nil {
+		// 如果没有传递数据，默认返回一个空的 gin.H
+		result.Data = gin.H{}
+	} else if msg, ok := data.(string); ok {
+		// 如果传递的是字符串，则将其作为 message 返回
+		result.Data = gin.H{"message": msg, "success": true}
+	} else if res, ok := data.(gin.H); ok {
+		// 如果传递的是 gin.H 类型，则直接使用
+		res["success"] = true
+		result.Data = res
+	} else {
+		// 否则保持原有数据并返回 success 标志
+		result.Data = gin.H{"data": data, "success": true}
+	}
+
 	c.JSON(http.StatusOK, result)
 }
 

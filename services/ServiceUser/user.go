@@ -20,8 +20,9 @@ func Register(c *gin.Context) {
 	}
 	if models.IsExited(User.Email) == false {
 		models.AddUser(User, c)
-		result.Success("RegisterSuccess", c)
-		c.Redirect(http.StatusFound, "/")
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+		})
 	} else {
 		result.Failture(result.APIcode.UserExist, result.APIcode.GetMessage(result.APIcode.UserExist), c, nil)
 		return
@@ -31,10 +32,12 @@ func Register(c *gin.Context) {
 func Login(c *gin.Context) {
 	Password := c.PostForm("password")
 	Email := c.PostForm("email")
-	var User dto.UserDTO
-	User.Email = Email
-	User.Password = Password
-	if status, user := models.CheckUser(User, c); status {
+
+	var u dto.UserDTO
+	User := models.FindUserByField("email", Email)
+	u.Email = Email
+	u.Password = Password
+	if status, user := models.CheckUser(u, c); status {
 		models.SaveAvatarId(User.AvatarId, User)
 		midware.SaveAutuSession(c, string(strconv.Itoa(int(user.ID))))
 		c.JSON(http.StatusOK, gin.H{

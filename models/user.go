@@ -1,6 +1,5 @@
 package models
 
-import "C"
 import (
 	"JayHonChat/result"
 	"JayHonChat/services/dto"
@@ -59,19 +58,20 @@ func CheckUser(user dto.UserDTO, c *gin.Context) (bool, *User) {
 	}
 	return true, &User
 }
-func FindUserByField(field, value string) User {
-	var u User
+
+func SaveAvatarId(AvatarId string, u User) User {
+
+	u.AvatarId = AvatarId
 	db := GetChatDB()
-	if field == "id" || field == "username" {
-		db.Where(field+"=?", value).First(&u)
-	}
+	db.Save(&u)
 	return u
 }
 
-func SaveAvatarId(AvatarId string, u dto.UserDTO) User {
-	var User User
-	User.AvatarId = AvatarId
+func FindUserByField(field, value string) User {
+	var u User
 	db := GetChatDB()
-	db.Save(&u)
-	return User
+	if field == "id" || field == "email" {
+		db.Where(field+"=?", value).First(&u)
+	}
+	return u
 }

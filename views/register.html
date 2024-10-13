@@ -12,7 +12,7 @@
 </head>
 <body class="register">
 <div class="scrollbar-macosx">
-    <div class="main container ">
+    <div class="main container">
         <div class="jumbotron">
             <h3>欢迎注册 JayHon-Chat 聊天室</h3>
             <p class="user_portrait">
@@ -36,8 +36,8 @@
             <div class="input-group">
                 <input type="email" name="email" class="form-control" placeholder="输入你的邮箱地址" required>
                 <input type="text" name="username" class="form-control" placeholder="输入你的昵称，不少于两位" required>
-                <input type="password" name="password" class="form-control" placeholder="密码，不少于6位" required>
-                <button id="register" class="btn btn-default" type="button"> <!-- 改为 type="button" -->
+                <input type="password" name="pwd" class="form-control" placeholder="密码，不少于6位" required>
+                <button id="register" class="btn btn-default" type="button">
                     <span class="">注册</span>
                 </button>
             </div>
@@ -70,7 +70,7 @@
         $('#register').click(function(event) {
             let email = $('.register input[name=email]').val(); // 用户邮箱
             let userName = $('.register input[name=username]').val(); // 用户昵称
-            let pwd = $('.register input[name=password]').val(); // 用户密码
+            let pwd = $('.register input[name=pwd]').val(); // 用户密码
             let avatar_id = $('.user_portrait img').attr('portrait_id'); // 用户头像id
 
             // 检查邮箱格式是否正确
@@ -89,13 +89,13 @@
                     username: userName,
                     password: pwd,
                     avatar_id: avatar_id
-                },
-                success: function(res) {
+                }, function(res) {
                     if (res.code != 0) {
-                        alert(res.msg);
+                        // 显示错误信息
+                        //$('#error-message').text(res.msg).show();
                         return false;
                     }
-                    window.location.assign("/home");
+                    window.location.assign("/");
                 }
             });
         });

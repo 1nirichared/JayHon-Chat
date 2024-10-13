@@ -23,6 +23,7 @@ function _time(time = +new Date()) {
 function WebSocketConnect(userInfo,toUserInfo = null) {
 	if ("WebSocket" in window) {
 		//console.log("您的浏览器支持 WebSocket!");
+		console.log('User Info:', userInfo);
 
 		if ( userInfo.uid <= 0 )
 		{
@@ -37,6 +38,7 @@ function WebSocketConnect(userInfo,toUserInfo = null) {
 			"data": {
 				"uid": userInfo.uid.toString(),
 				"room_id": userInfo.room_id,
+				"email"   :userInfo.email,
 				"avatar_id": userInfo.avatar_id,
 				"username": userInfo.username,
 				"to_user": toUserInfo

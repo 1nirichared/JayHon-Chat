@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/jianfengye/collection"
+	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -22,7 +23,7 @@ type wsClient struct {
 	RemoteAddr string          `json:"remote_addr"`
 	Uid        string          `json:"uid"`
 	Username   string          `json:"username"`
-	Roomid     string          `json:"roomid"`
+	RoomId     string          `json:"room_id"`
 	AvatarId   string          `json:"avatar_id"`
 }
 
@@ -33,7 +34,7 @@ type msgData struct {
 	ToUid    string        `json:"to_uid"`
 	Content  string        `json:"content"`
 	ImageUrl string        `json:"image_url"`
-	Roomid   string        `json:"roomid"`
+	RoomId   string        `json:"room_id"`
 	Count    int           `json:"count"`
 	List     []interface{} `json:"list"`
 	Time     int64         `json:"time"`
@@ -120,32 +121,27 @@ func Run(c *gin.Context) {
 	coon, _ := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 	defer coon.Close()
 	done := make(chan struct{})
-	go Read(coon, done)
-	go Write(done)
+	go read(coon, done)
+	go write(done)
 	select {}
 }
 
-func Read(conn *websocket.Conn, done chan<- struct{}) {
+func read(conn *websocket.Conn, done chan<- struct{}) {
 
 	defer func() {
 		//捕获read抛出的panic
 		if err := recover(); err != nil {
-			var errObj error
-			// 检查 err 是否是 error 类型
-			if e, ok := err.(error); ok {
-				errObj = e
-			} else {
-				// 如果不是 error 类型，创建一个新的 error
-				errObj = fmt.Errorf("%v", err)
-			}
-			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &errObj)
+			log.Println("read发生错误", err)
+
 		}
+
 	}()
 	for {
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			offline <- conn
 			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &err)
+			log.Println("err 1")
 			conn.Close()
 			close(done)
 			return
@@ -163,13 +159,14 @@ func Read(conn *websocket.Conn, done chan<- struct{}) {
 		clientMsgLock.Unlock()
 		if clientMsg.Data.Uid != "" {
 			if clientMsg.Status == msgTypeOnline {
-				roomid, _ := getRoomId()
+				//进入房间，建立连接
+				roomId, _ := getRoomId()
 				enterRooms <- wsClient{
 					Conn:       conn,
 					RemoteAddr: conn.RemoteAddr().String(),
 					Uid:        clientMsg.Data.Uid,
 					Username:   clientMsg.Data.Username,
-					Roomid:     roomid,
+					RoomId:     roomId,
 					AvatarId:   clientMsg.Data.AvatarId,
 				}
 			}
@@ -180,7 +177,7 @@ func Read(conn *websocket.Conn, done chan<- struct{}) {
 	}
 }
 
-func Write(done <-chan struct{}) {
+func write(done <-chan struct{}) {
 	defer func() {
 		if err := recover(); err != nil {
 			var errObj error
@@ -199,7 +196,7 @@ func Write(done <-chan struct{}) {
 		case <-done:
 			return
 		case r := <-enterRooms:
-			HandleConnClient(r.Conn)
+			handleConnClient(r.Conn)
 		case cl := <-sMsg:
 			serverMsgStr, _ := json.Marshal(cl)
 			switch cl.Status {
@@ -224,8 +221,8 @@ func Write(done <-chan struct{}) {
 	}
 }
 
-func HandleConnClient(conn *websocket.Conn) {
-	roomid, roomIdInt := getRoomId()
+func handleConnClient(conn *websocket.Conn) {
+	roomId, roomIdInt := getRoomId()
 	objColl := collection.NewObjCollection(rooms[roomIdInt])
 	//移除已存在相同UID的用户
 	retColl := safe.Safety.Lock(func() interface{} {
@@ -246,7 +243,7 @@ func HandleConnClient(conn *websocket.Conn) {
 			RemoteAddr: conn.RemoteAddr().String(),
 			Uid:        clientMsg.Data.Uid,
 			Username:   clientMsg.Data.Username,
-			Roomid:     roomid,
+			RoomId:     roomId,
 			AvatarId:   clientMsg.Data.AvatarId,
 		})
 	}).(collection.ICollection)
@@ -256,12 +253,14 @@ func HandleConnClient(conn *websocket.Conn) {
 }
 
 func getRoomId() (string, int) {
-	roomid := clientMsg.Data.Roomid
-	roomIdInt, err := strconv.Atoi(roomid)
+	roomId := clientMsg.Data.RoomId
+	roomIdInt, err := strconv.Atoi(roomId)
 	if err != nil {
 		result.Failture(result.APIcode.AtoiError, result.APIcode.GetMessage(result.APIcode.AtoiError), nil, &err)
+		log.Println("here")
+		return "", 0
 	}
-	return roomid, roomIdInt
+	return roomId, roomIdInt
 }
 
 // 定时任务清理没有心跳的连接
@@ -364,11 +363,11 @@ func appendPing(coon *websocket.Conn) {
 
 // 格式化传递给客户端的消息数据
 func formatServeMsgStr(status int, coon *websocket.Conn) ([]byte, msg) {
-	roomid, roomIdInt := getRoomId()
+	roomId, roomIdInt := getRoomId()
 	data := msgData{
 		Username: clientMsg.Data.Username,
 		Uid:      clientMsg.Data.Uid,
-		Roomid:   roomid,
+		RoomId:   roomId,
 		Time:     time.Now().UnixNano() / 1e6,
 	}
 	if status == msgTypeSend || status == msgTypePrivateChat {
@@ -390,15 +389,15 @@ func formatServeMsgStr(status int, coon *websocket.Conn) ([]byte, msg) {
 				"user_id":    intUid,
 				"to_user_id": toUid,
 				"content":    data.Content,
-				"room_id":    data.Roomid,
-				"imageUrl":   clientMsg.Data.ImageUrl,
+				"room_id":    data.RoomId,
+				"image_url":  clientMsg.Data.ImageUrl,
 			})
 		} else {
 			models.SaveContent(map[string]interface{}{
 				"user_id":    intUid,
 				"to_user_id": toUid,
 				"content":    data.Content,
-				"room_id":    data.Roomid,
+				"room_id":    data.RoomId,
 			})
 		}
 	}
