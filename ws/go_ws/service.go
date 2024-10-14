@@ -137,7 +137,7 @@ func read(conn *websocket.Conn, done chan<- struct{}) {
 
 	}()
 	for {
-		_, msg, err := conn.ReadMessage()
+		_, messag, err := conn.ReadMessage()
 		if err != nil {
 			offline <- conn
 			result.Failture(result.APIcode.ReadError, result.APIcode.GetMessage(result.APIcode.ReadError), nil, &err)
@@ -146,14 +146,14 @@ func read(conn *websocket.Conn, done chan<- struct{}) {
 			close(done)
 			return
 		}
-		if string(msg) == `heartbeat` {
+		if string(messag) == `heartbeat` {
 			appendPing(conn)
 			chNotify <- 1
 			conn.WriteMessage(websocket.TextMessage, []byte(`{"status":0,"data":"heartbeat ok"}`))
 			<-chNotify
 			continue
 		}
-		json.Unmarshal(msg, &clientMsgData)
+		json.Unmarshal(messag, &clientMsgData)
 		clientMsgLock.Lock()
 		clientMsg = clientMsgData
 		clientMsgLock.Unlock()
