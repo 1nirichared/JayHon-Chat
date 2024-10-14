@@ -1,5 +1,5 @@
 .idea
-/conf/config.go
+conf/config.go
 /tmp_images
 *.exe
 *.exe~
